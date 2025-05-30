@@ -34,3 +34,45 @@ The `-n` option specifies the Kubernetes namespace to retrieve from. Without the
 When you create resources (pods or services) without specifying a namespace, it will by default create them in the `default` namespace. The `kube-system` namespace is a special namespace used to run and manage the core system components and infrastructure of the Kubernetes cluster itself, holding essential system pods and services required for Kubernetes to operate properly.
 
 The output with the `-n kube-system` option did not list the pods/services explicitly created because it gives pods created on the `kube-system` namespace, not the `default` namespace, whereas we created our own pods and services in the `default` namespace.
+
+## Tutorial 2
+### Question 1
+In the Rolling Update strategy, old pods are gradually updated with newer ones, ensuring that some instances of the application still remain available at all times while new pods are being created. The Recreate strategy, on the other hand, terminates all existing pods in the old version before creating new ones in the updated version. It is used if the application cannot handle multiple versions running concurrently.
+
+### Question 2
+First write the following command in PowerShell:
+```
+kubectl patch deployment spring-petclinic-rest -p '{"spec": {"strategy": {"type": "Recreate"}}}'
+```
+
+This command updates the `spec.strategy.type` field of the Deployment to `"Recreate"`. By default, it is set to `"RollingUpdate"`.
+
+However, this method doesn't work for me (using escaped double quotes inside double quotes also doesn't work).
+
+So another method is:
+
+Run `kubectl edit deployment spring-petclinic-rest`
+
+This will open a YAML file containing the configurations. Find the `strategy` field inside `spec`, and modify it so that it says `type: Recreate`.
+Contents of the file should be:
+```
+...
+spec:
+  ...
+  strategy:
+    type: Recreate
+  ...
+...
+```
+
+After that, run `kubectl get deployment spring-petclinic-rest -o jsonpath='{.spec.strategy.type}'` to verify the deployment strategy type (make sure that it outputs `Recreate`.)
+
+After that, simply run `kubectl set image deployments/spring-petclinic-rest spring-petclinic-rest=docker.io/springcommunity/spring-petclinic-rest:3.2.1` as usual.
+
+The update status can be verified using `kubectl rollout status deployments/spring-petclinic-rest`.
+
+### Question 3
+The files can be seen in `deployment-recreate.yaml` and `services-recreate.yaml`.
+
+### Question 4
+Using manifest files directly define the desired state of the application. This is called declarative configuration. Using `kubectl set image` (manually), on the other hand, is imperative, as you're changing the state directly (one field at a time) without a record of the full configuration. Using manifests also make it able to be stored in Git, allowing change tracking, rollbacks, and code reviews. Using the manual method does not leave any record of the changes, unless manually documented. Using a manifest file also ensures consistency in the deployment, as using manual commands may risk inconsistencies (such as forgetting to update a label). Manifest files also allow for easier automation with CI/CD pipelines, as imperative commands require extra scripting.
